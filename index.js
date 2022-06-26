@@ -65,10 +65,9 @@ app.get('/participants', async (req, res) => {
 })
 
 app.post('/messages', async (req, res) => {
-    const {to, text, type} = req.body;
-    const {User: from} = req.header;
-
-    
+    const body = req.body;
+    const { user } = req.headers;
+        
     try{        
         const messageSchema = joi.object({
             to: joi.string().required(),
@@ -77,32 +76,27 @@ app.post('/messages', async (req, res) => {
             from: joi.string().required()    
         });
 
-        const {error} = messageSchema.validate({to, text, type, from}, {abortEarly: false});
-    
+
+        const {error} = messageSchema.validate({...body, from:user}, {abortEarly: false});      
         if(error){
             const errorDescription = error.details.map(item => item.message)
             res.status(422).send(errorDescription);
-            console.log(errorDescription)
-            return
-        }
+            return            
+        }        
 
-        users = await db.collection("users").find().toArray();
-        usersArray = users.find(users => users.name === from)
-         if(!usersArray){
-            res.status(422).send();
-            return
-         }
-        
-        /*const existentUser = await db.collection("users").findOne({name:from})
-        if(existentUser){
-            res.status(409).send('Este usuário já existe')
-            return 
-        }*/
+        const users = await db.collection("users").find().toArray();
+        const usersArray = users.find(participant => participant.name === user)
 
-       
-        await db.collection("message").insertOne({to, text, type, from, time:dayjs().format('HH:mm:ss')})
-        
+        console.log(usersArray)
+
+        if(!usersArray){
+            res.status(422).send("erro aqui");
+            return
+        }       
+      
+        await db.collection("message").insertOne({...body, from:user, time:dayjs().format('HH:mm:ss')})        
         res.status(201).send();
+        
     }catch(error){
         console.log(error)
         res.status(500).send();
