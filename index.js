@@ -4,6 +4,8 @@ import { MongoClient, ServerApiVersion } from "mongodb";
 import dayjs from 'dayjs';
 import 'dayjs/locale/pt-br.js';
 import joi from 'joi';
+import dotenv from "dotenv";
+dotenv.config();
 
 
 const mongoClient = new MongoClient("mongodb+srv://BiaChamsim:Bia310193@cluster0.9buio.mongodb.net/?retryWrites=true&w=majority", { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
