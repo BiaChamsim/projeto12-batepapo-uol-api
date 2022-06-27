@@ -104,13 +104,78 @@ app.post('/messages', async (req, res) => {
 
 })
 
+app.get('/messages', async (req, res) =>{
+
+    const {limit} = req.query;
+    const {user} = req.headers;
+    
+    try{
+        const sendMessage = await db.collection("messages").find({$or:[{to:"Todos"},{to:user},{from:user}]}).toArray()
+                
+        if(!limit || limit > sendMessage.lenght){
+            res.send(sendMessage)
+            return
+        }else{
+            const firstParam = (sendMessage.length) - limit
+            const secondparam = sendMessage.length
+            const filteredMessages = sendMessage.slice(firstParam, secondparam )
+            res.send(filteredMessages)
+        }        
+    
+    }catch(error){
+        console.log(error)
+        res.status(500).send()
+    }
+})
+
+app.post('/status', async (req, res) =>{
+    const {user} = req.headers;
+
+    try{
+        const participants = await db.collection("users")
+        const checkParticipant = await participants.findOne({name: user})
+        console.log(checkParticipant)
+
+        if(!checkParticipant){
+            res.status(404).send();
+            return
+        }
+
+        await db.collection("participants").updateOne({name:user}, {$set: {lastStatus:Date.now()}})
+        console.log(participants)
+
+        res.status(200).send()
+    }catch(error){
+        console.log(error)
+        res.status(500).send()
+    }
+})
 
 
+async function automaticRemoval(){
+    try{
+        const participants = await db.collection("participants").find().toArray();
+        const loggedOutUser = participants.filter(status => ((status.lastStatus + 10000) < Date.now()))
+    
+        if(loggedOutUser){
+            loggedOutUser.forEach(status => {
+                db.collection("participants").deleteOne({_id: new ObjectId(status._id)})
+                db.collection("messages").insertOne({
+                    from: status.name,
+                    to: "Todos",
+                    text: "sai da sala..." ,
+                    type: "status",
+                    time: dayjs().format("HH:MM:SS")
+                })
+            })
+        }
+    }catch(error){
+        console.log(error)
+        res.status(500).send()
+    }
+}
 
-
-
-
-
+setInterval(automaticRemoval, 15000);
 
 
 app.listen(5000, () => {
